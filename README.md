@@ -1,13 +1,10 @@
-## Khoá chính (Primary Key): ## 
-- Khóa chính được sử dụng để định danh duy nhất mỗi record tại table của cơ sở dữ liệu.  
-- Dữ liệu của field khóa chính nên có tính độc nhất, không có các giá trị Null, và nên để tự tăng
-- Sử dụng để thiết lập quan hệ giữa hai bảng tại cơ sở dữ liệu.  
+## Index trong database : ##  
+- Là một dạng cấu trúc dùng để xác định vị trí và truy cập vào dữ liệu trong các bảng database
+- Tối ưu hiệu suất truy vấn database bằng việc giảm lượng truy cập vào bộ nhớ khi thực hiện truy vấn
+- Index thường được tạo mặc định cho primary key, foreign key.
+- Index là một cấu trúc dữ liệu gồm:
+    + Cột Search Key: chứa bản sao các giá trị của cột được tạo Index
+    + Cột Data Reference: chứa con trỏ trỏ đến địa chỉ của bản ghi có giá trị cột index tương ứng
 
-## Giá trị của ID tự tăng vì : ##  
-- AUTO_INCREMENT chỉ thiết lập được cho kiểu INT và mỗi bảng chỉ có một field duy nhất.
-- Không phải thêm dữ liệu vào một cách thủ công vì tự động tăng, giảm khi dữ liệu được thêm vào hoặc xoá đi
-
-## Dùng nhiều khoá chính (Primary Key) khi: ##  
-- Có nhiều định danh hơn cho dữ liệu
-- Đảm bảo sự duy nhất của dữ liệu
-
+## Khác biệt khi có và không có index: ##  
+- Tiết kiệm thời gian khi tra cứu dữ liệu
