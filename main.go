@@ -2,10 +2,14 @@ package main
 
 import (
 	"FirstProject/component"
-	"FirstProject/modules/note/notemodel"
+	"FirstProject/component/uploadprovider"
+	"FirstProject/middleware"
+	"FirstProject/modules/upload/uploadtransport/ginupload"
+	"FirstProject/modules/user/usertransport/ginuser"
+	"os"
+
 	"FirstProject/modules/note/notetransport/ginnote"
-	"encoding/json"
-	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -13,30 +17,34 @@ import (
 )
 
 func main() {
-	test := notemodel.Note{
-		Title:   "Test",
-		Content: "Demo",
-	}
-
-	jsondata, err := json.Marshal(test)
-	fmt.Println(string(jsondata))
-	DBConnectionStr := "root:sa123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local"
-	db, err := gorm.Open(mysql.Open(DBConnectionStr), &gorm.Config{})
+	//DBConnectionStr := "root:sa123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4&parseTime=True&loc=Local"
+	db, err := gorm.Open(mysql.Open(os.Getenv("DBConnectionStr")), &gorm.Config{})
 	if err != nil {
 		log.Fatalln(err)
 	}
-	//fmt.Println(db, err)
 	r := gin.Default()
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-	//r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 
-	appCtx := component.NewAppContext(db)
+	s3BucketName := os.Getenv("s3BucketName")
+	s3Region := os.Getenv("s3Region")
+	s3APIKey := os.Getenv("s3APIKey")
+	s3SecretKey := os.Getenv("s3SecretKey")
+	s3Domain := os.Getenv("S3Domain")
+	secretKey := os.Getenv("SYSTEM_SECRET")
+	s3Provider := uploadprovider.NewS3Provider(s3BucketName, s3Region, s3APIKey, s3SecretKey, s3Domain)
 
-	notes := r.Group("/notes")
+	appCtx := component.NewAppContext(db, s3Provider, secretKey)
+
+	v1 := r.Group("/v1")
+
+	v1.POST("/upload", ginupload.Upload(appCtx))
+
+	v1.POST("/register", ginuser.Register(appCtx))
+
+	v1.POST("/login", ginuser.Login(appCtx))
+
+	v1.GET("/profile", middleware.RequiredAuth(appCtx), ginuser.GetProfile(appCtx))
+
+	notes := v1.Group("/notes")
 	{
 		notes.POST("", ginnote.CreateNote(appCtx))
 
@@ -47,73 +55,6 @@ func main() {
 		notes.PATCH("/:id", ginnote.UpdateNoteById(appCtx))
 
 		notes.DELETE("/:id", ginnote.DeleteNoteById(appCtx))
-		//	notes.GET("/:id", func(c *gin.Context) {
-		//		id, err := strconv.Atoi(c.Param("id"))
-		//
-		//		if err != nil {
-		//			c.JSON(401, map[string]interface{}{
-		//				"error": err.Error(),
-		//			})
-		//			return
-		//		}
-		//
-		//		var data Note
-		//		if err := db.Where("id = ?", id).First(&data).Error; err != nil {
-		//			c.JSON(401, map[string]interface{}{
-		//				"error": err.Error(),
-		//			})
-		//			return
-		//		}
-		//		c.JSON(http.StatusOK, data)
-		//	})
-		//	notes.PATCH("/:id", func(c *gin.Context) {
-		//		id, err := strconv.Atoi(c.Param("id"))
-		//
-		//		if err != nil {
-		//			c.JSON(401, map[string]interface{}{
-		//				"error": err.Error(),
-		//			})
-		//			return
-		//		}
-		//
-		//		var data Note
-		//
-		//		if err := c.ShouldBind(&data); err != nil {
-		//			c.JSON(401, map[string]interface{}{
-		//				"error": err.Error(),
-		//			})
-		//			return
-		//		}
-		//
-		//		if err := db.Where("id = ?", id).Updates(&data).Error; err != nil {
-		//			c.JSON(401, map[string]interface{}{
-		//				"error": err.Error(),
-		//			})
-		//			return
-		//		}
-		//
-		//		c.JSON(http.StatusOK, data)
-		//	})
-		//
-		//	notes.DELETE("/:id", func(c *gin.Context) {
-		//		id, err := strconv.Atoi(c.Param("id"))
-		//
-		//		if err != nil {
-		//			c.JSON(401, map[string]interface{}{
-		//				"error": err.Error(),
-		//			})
-		//			return
-		//		}
-		//
-		//		if err := db.Table(Note{}.TableName()).Where("id = ?", id).Delete(nil).Error; err != nil {
-		//			c.JSON(401, map[string]interface{}{
-		//				"error": err.Error(),
-		//			})
-		//			return
-		//		}
-		//
-		//		c.JSON(http.StatusOK, gin.H{"ok": 1})
-		//	})
 	}
 	r.Run()
 }
